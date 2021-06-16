@@ -1,7 +1,7 @@
 {
     "name": "Firebase.Storage.Editor",
     "references": [
-        "GUID:d1a13c4d5d46ade41beec83b75c0c2f0"
+        "GUID:bfae05940bb21a84b88f09d028b3bd97"
     ],
     "includePlatforms": [
         "Editor"
