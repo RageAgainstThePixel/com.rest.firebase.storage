@@ -1,0 +1,17 @@
+{
+    "name": "Firebase.Storage.Editor",
+    "references": [
+        "GUID:d1a13c4d5d46ade41beec83b75c0c2f0"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
