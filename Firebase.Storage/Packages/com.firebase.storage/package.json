@@ -15,7 +15,7 @@
     "url": "https://github.com/StephenHodgson"
   },
   "dependencies": {
-    "com.firebase.authentication": "1.0.0-preview.1"
+    "com.firebase.authentication": "1.0.0-preview.2"
   },
   "testables": [
     "com.firebase.authentication"
