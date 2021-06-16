@@ -17,7 +17,7 @@ Based on [FirebaseStorage.net](https://github.com/step-up-labs/firebase-storage-
     - `com.openupm`
     - `com.firebase`
 
-![scoped-registries](Firebase.Storage/Packages/com.firebase.storage/Documentation~/images/package-manager-scopes.png)
+![scoped-registries](Documentation~/images/package-manager-scopes.png)
 
 - Open the Unity Package Manager window
 - Change the Registry from Unity to `My Registries`
