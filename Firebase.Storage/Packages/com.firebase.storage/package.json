@@ -1,16 +1,26 @@
 {
   "name": "com.firebase.storage",
   "displayName": "Firebase.Storage",
-  "description": "A Firebase Storage package for the Unity Engine.",
+  "description": "A simple package for working with Firebase Storage",
   "keywords": [],
   "version": "1.0.0-preview.1",
   "unity": "2019.4",
   "license": "MIT",
   "repository": {
-    "type": "git"
+    "type": "git",
+    "repository": "https://github.com/StephenHodgson/com.firebase.storage.git"
   },
-  "author": "Stephen Hodgson",
+  "author": {
+    "name": "Stephen Hodgson",
+    "url": "https://github.com/StephenHodgson"
+  },
   "dependencies": {
     "com.firebase.authentication": "1.0.0-preview.1"
+  },
+  "testables": [
+    "com.firebase.authentication"
+  ],
+  "publishConfig": {
+    "registry": "https://package.openupm.com"
   }
 }
