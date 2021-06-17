@@ -1,6 +1,6 @@
 # Firebase.Storage
 
-A [Firebase](https://firebase.google.com/) Storage package for the Unity Engine.
+A [Firebase](https://firebase.google.com/) Storage package for the [Unity](https://unity.com/) Game Engine.
 
 Based on [FirebaseStorage.net](https://github.com/step-up-labs/firebase-storage-dotnet)
 
@@ -10,11 +10,11 @@ Based on [FirebaseStorage.net](https://github.com/step-up-labs/firebase-storage-
 
 ### Via Unity Package Manager and OpenUPM
 
-- Open your Unity project settings- Add the OpenUPM package registry:
+- Open your Unity project settings
+- Add the OpenUPM package registry:
   - `Name: OpenUPM`
   - `URL: https://package.openupm.com`
   - `Scope(s):`
-    - `com.openupm`
     - `com.firebase`
 
 ![scoped-registries](Documentation~/images/package-manager-scopes.png)
@@ -33,6 +33,7 @@ Based on [FirebaseStorage.net](https://github.com/step-up-labs/firebase-storage-
 ```csharp
 // Create a firebase authentication client
 var firebaseClient = new FirebaseAuthenticationClient();
+
 // Create a firebase storage client
 var firebaseStorageClient = new FirebaseStorageClient(firebaseClient);
 
@@ -65,11 +66,9 @@ Assert.IsTrue(responseData == json);
 
 // Delete storage content
 await resource.DeleteAsync();
-
-firebaseClient.SignOut();
 ```
 
 ## Additional Packages
 
 - [Firebase.Authentication](https://github.com/StephenHodgson/com.firebase.authentication)
-- Firebase.Database (Coming soon!)
+- [Firebase.Realtime-Database](https://github.com/StephenHodgson/com.firebase.realtime-database)
