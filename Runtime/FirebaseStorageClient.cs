@@ -13,19 +13,16 @@ namespace Firebase.Storage
         /// Creates a new <see cref="FirebaseStorageClient"/>.
         /// </summary>
         /// <param name="authenticationClient"><see cref="FirebaseAuthenticationClient"/>.</param>
-        /// <param name="storageBucket">Optional override to storage bucket location.</param>
+        /// <param name="storageBucket">Optional, override storage bucket to use.</param>
         public FirebaseStorageClient(FirebaseAuthenticationClient authenticationClient, string storageBucket = null)
         {
             AuthenticationClient = authenticationClient;
-
-            StorageBucket = string.IsNullOrWhiteSpace(storageBucket)
-                ? $"{authenticationClient.Configuration.ProjectId}.appspot.com"
-                : storageBucket;
+            StorageBucket = storageBucket ?? $"{authenticationClient.Configuration.ProjectId}.appspot.com";
         }
 
         internal FirebaseAuthenticationClient AuthenticationClient { get; }
 
-        internal string StorageBucket { get; }
+        public string StorageBucket { get; }
 
         /// <summary>
         /// Constructs a firebase path to the resource.
