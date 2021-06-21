@@ -1,10 +1,11 @@
 # Firebase.Storage
 
+[![Discord](https://img.shields.io/discord/855294214065487932.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/xQgMW9ufN4)
+[![openupm](https://img.shields.io/npm/v/com.firebase.storage?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.firebase.storage/)
+
 A [Firebase](https://firebase.google.com/) Storage package for the [Unity](https://unity.com/) Game Engine.
 
 Based on [FirebaseStorage.net](https://github.com/step-up-labs/firebase-storage-dotnet)
-
-[![openupm](https://img.shields.io/npm/v/com.firebase.storage?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.firebase.storage/)
 
 ## Installing
 
@@ -26,7 +27,7 @@ Based on [FirebaseStorage.net](https://github.com/step-up-labs/firebase-storage-
 ### Via Unity Package Manager and Git url
 
 - Open your Unity Package Manager
-- Add package from git url: `https://github.com/StephenHodgson/com.firebase.storage.git#upm`
+- Add package from git url: `https://github.com/RageAgainstThePixel/com.firebase.storage.git#upm`
 
 ## Getting Started
 
@@ -70,5 +71,5 @@ await resource.DeleteAsync();
 
 ## Additional Packages
 
-- [Firebase.Authentication](https://github.com/StephenHodgson/com.firebase.authentication)
-- [Firebase.Realtime-Database](https://github.com/StephenHodgson/com.firebase.realtime-database)
+- [Firebase.Authentication](https://github.com/RageAgainstThePixel/com.firebase.authentication)
+- [Firebase.Realtime-Database](https://github.com/RageAgainstThePixel/com.firebase.realtime-database)
