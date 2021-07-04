@@ -4,10 +4,12 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Firebase.Storage
 {
@@ -15,25 +17,39 @@ namespace Firebase.Storage
     {
         private const string FirebaseStorageEndpoint = "https://firebasestorage.googleapis.com/v0/b/";
 
-        private readonly List<string> children;
+        private readonly string name;
+        private readonly string delimiter;
         private readonly HttpClient httpClient;
         private readonly FirebaseStorageClient storageClient;
+        private readonly Dictionary<string, FirebaseStorageResource> children;
 
-        internal FirebaseStorageResource(FirebaseStorageClient storageClient, string name)
+        internal FirebaseStorageResource(FirebaseStorageClient storageClient, string resourcePath, string delimiter = "/")
         {
             this.storageClient = storageClient;
             httpClient = new HttpClient();
-            children = new List<string> { name };
+            this.delimiter = delimiter;
+            children = new Dictionary<string, FirebaseStorageResource>();
+
+            var resourcePathParts = resourcePath.Split(new[] { delimiter }, StringSplitOptions.RemoveEmptyEntries);
+
+            name = resourcePathParts.Length > 0 ? resourcePathParts[0] : string.Empty;
         }
 
+        /// <inheritdoc />
+        public override string ToString() => ResourcePath;
+
+        private string ResourcePath => $"{name}{delimiter}{string.Join(delimiter, children.Keys)}";
+
         private string EscapedPath
-            => Uri.EscapeDataString(string.Join("/", children));
+            => Uri.EscapeDataString(ResourcePath);
+
+        private string BaseObjectUrl => $"{FirebaseStorageEndpoint}{storageClient.StorageBucket}/o";
 
         private string TargetUrl
-            => $"{FirebaseStorageEndpoint}{storageClient.StorageBucket}/o?name={EscapedPath}";
+            => $"{BaseObjectUrl}?name={EscapedPath}";
 
         private string DownloadUrl
-            => $"{FirebaseStorageEndpoint}{storageClient.StorageBucket}/o/{EscapedPath}";
+            => $"{BaseObjectUrl}/{EscapedPath}";
 
         private string FullDownloadUrl
             => $"{DownloadUrl}?alt=media&token=";
@@ -165,20 +181,92 @@ namespace Firebase.Storage
         }
 
         /// <summary>
-        /// Constructs firebase path to the file.
+        /// Constructs firebase path to the child resource.
         /// </summary>
-        /// <param name="name"> Name of the entity. This can be folder or a file name or full path.</param>
+        /// <param name="childName"> Name of the entity. This can be folder, a file name or full path.</param>
         /// <example>
-        ///     storage
-        ///         .Location("some")
-        ///         .Child("path")
-        ///         .Child("to/file.png");
+        /// // Fluid syntax.
+        /// storage.Resource("some/path/to/file.png");
+        /// // Object composition syntax.
+        /// storage.Resource("some")
+        ///        .Child("path")
+        ///        .Child("to/file.png");
         /// </example>
-        /// <returns> <see cref="FirebaseStorageResource"/> for fluid syntax.</returns>
-        public FirebaseStorageResource Child(string name)
+        /// <returns>A <see cref="FirebaseStorageResource"/> for fluid syntax.</returns>
+        public FirebaseStorageResource Child(string childName)
         {
-            children.Add(name);
-            return this;
+            var childResourcePath = $"{name}{delimiter}{childName}";
+
+            if (!children.TryGetValue(childResourcePath, out var childResource))
+            {
+                childResource = new FirebaseStorageResource(storageClient, childResourcePath, delimiter);
+                children.Add(childResourcePath, childResource);
+            }
+
+            return childResource;
+        }
+
+        /// <summary>
+        /// Retrieves a list of objects matching the criteria, ordered in the list lexicographically by name.
+        /// </summary>
+        /// <param name="prefix">Filter results to include only objects whose names begin with this prefix.</param>
+        /// <param name="maxResults">Maximum combined number of entries in items[] and prefixes[] to return in a single page of responses. Because duplicate entries in prefixes[] are omitted, fewer total results may be returned than requested. The service uses this parameter or 1,000 items, whichever is smaller.</param>
+        /// <param name="startOffset">Filter results to objects whose names are lexicographically equal to or after startOffset. If endOffset is also set, the objects listed have names between startOffset (inclusive) and endOffset (exclusive).</param>
+        /// <param name="endOffset">Filter results to objects whose names are lexicographically before endOffset. If startOffset is also set, the objects listed have names between startOffset (inclusive) and endOffset (exclusive).</param>
+        /// <returns></returns>
+        public async Task<List<FirebaseStorageResource>> ListItems(string prefix = null, int maxResults = 1000, string startOffset = null, string endOffset = null)
+        {
+            var responseContent = "N/A";
+            var request = $"{BaseObjectUrl}?{Uri.EscapeUriString(delimiter)}&{nameof(maxResults)}={maxResults}";
+
+            if (!string.IsNullOrWhiteSpace(prefix))
+            {
+                request += $"{nameof(prefix)}={prefix}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(startOffset))
+            {
+                request += $"{nameof(startOffset)}={startOffset}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(endOffset))
+            {
+                request += $"{nameof(endOffset)}={endOffset}";
+            }
+
+            request += $"&key={storageClient.AuthenticationClient.Configuration.ApiKey}";
+
+            try
+            {
+                await SetRequestHeadersAsync().ConfigureAwait(false);
+                var response = await httpClient.GetAsync(request).ConfigureAwait(false);
+                responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception e)
+            {
+                throw new FirebaseStorageException(request, responseContent, e);
+            }
+
+            var result = JsonUtility.FromJson<ListResponse>(responseContent);
+
+            foreach (var resultPrefix in result.Prefixes)
+            {
+                if (!children.TryGetValue(resultPrefix, out _))
+                {
+                    children.Add(resultPrefix, new FirebaseStorageResource(storageClient, resultPrefix, delimiter));
+                }
+            }
+
+            foreach (var storageObject in result.Items)
+            {
+                if (!children.TryGetValue(storageObject.Name, out _))
+                {
+                    children.Add(storageObject.Name, new FirebaseStorageResource(storageClient, storageObject.Name, delimiter));
+                }
+            }
+
+            return children.Values.ToList();
         }
 
         private async Task<T> PerformFetch<T>()
