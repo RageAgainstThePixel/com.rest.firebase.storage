@@ -1,10 +1,10 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 using Firebase.Authentication;
+using Firebase.Authentication.Tests;
 using NUnit.Framework;
 using System;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using UnityEngine;
@@ -42,44 +42,51 @@ namespace Firebase.Storage.Tests
             const string email = "test@email.com";
             const string password = "tempP@ssw0rd";
 
-            var firebaseClient = new FirebaseAuthenticationClient();
-            var fetchResult = firebaseClient.FetchSignInMethodsForEmailAsync(email).Result;
-
-            if (fetchResult.SignInProviders.Contains(FirebaseProviderType.EmailAndPassword))
+            UnityTestUtils.RunAsyncTestsAsSync(async () =>
             {
-                firebaseClient.SignInWithEmailAndPasswordAsync(email, password).Wait();
-            }
-            else
-            {
-                firebaseClient.CreateUserWithEmailAndPasswordAsync(email, password).Wait();
-            }
+                var firebaseClient = new FirebaseAuthenticationClient();
+                var fetchResult = await firebaseClient.FetchSignInMethodsForEmailAsync(email);
 
-            var firebaseStorageClient = new FirebaseStorageClient(firebaseClient);
+                if (fetchResult.UserExists)
+                {
+                    await firebaseClient.SignInWithEmailAndPasswordAsync(email, password);
+                }
+                else
+                {
+                    await firebaseClient.CreateUserWithEmailAndPasswordAsync(email, password);
+                }
 
-            Assert.IsNotNull(firebaseStorageClient);
+                var firebaseStorageClient = new FirebaseStorageClient(firebaseClient);
 
-            var resource = firebaseStorageClient.Resource("root/test.json");
+                Assert.IsNotNull(firebaseStorageClient);
 
-            var json = "{\"value\":\"42\"}";
+                var restResource = firebaseStorageClient.Resource("root/test.json");
 
-            string downloadUrl;
+                var json = "{\"value\":\"42\"}";
 
-            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
-            {
-                downloadUrl = resource.UploadAsync(stream, new Progress<FirebaseStorageProgress>(progress => Debug.Log(progress.Percentage))).Result;
-            }
+                string downloadUrl;
 
-            var knownUrl = resource.GetDownloadUrlAsync().Result;
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
+                {
+                    downloadUrl = await restResource.UploadAsync(stream);
+                }
 
-            Assert.IsTrue(downloadUrl == knownUrl);
+                var knownUrl = await restResource.GetDownloadUrlAsync();
 
-            var httpClient = new HttpClient();
-            var response = httpClient.GetAsync(knownUrl).Result;
-            var responseData = response.Content.ReadAsStringAsync().Result;
-            Assert.IsTrue(responseData == json);
+                Assert.IsTrue(downloadUrl == knownUrl);
 
-            resource.DeleteAsync().Wait();
-            firebaseClient.User.DeleteAsync().Wait();
+                var httpClient = new HttpClient();
+                var response = await httpClient.GetAsync(knownUrl);
+                var responseData = await response.Content.ReadAsStringAsync();
+                Assert.IsTrue(responseData == json);
+
+                var resources = await firebaseStorageClient.ListItemsAsync();
+
+                Assert.IsNotEmpty(resources);
+
+                await restResource.DeleteAsync();
+                await firebaseClient.User.DeleteAsync();
+            });
         }
     }
 }
