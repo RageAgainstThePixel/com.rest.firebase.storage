@@ -20,8 +20,8 @@ namespace Firebase.Storage
         public IReadOnlyList<string> Prefixes => prefixes;
 
         [SerializeField]
-        private List<StorageObject> items;
+        private List<StorageObjectMetaData> items;
 
-        public IReadOnlyList<StorageObject> Items => items;
+        public IReadOnlyList<StorageObjectMetaData> Items => items;
     }
 }

@@ -5,13 +5,21 @@ using UnityEngine;
 
 namespace Firebase.Storage
 {
+    /// <summary>
+    /// Full list of meta data available here: https://firebase.google.com/docs/storage/web/file-metadata
+    /// </summary>
     [Serializable]
-    internal class StorageObject
+    public class StorageObjectMetaData
     {
         [SerializeField]
         private string name;
 
         public string Name => name;
+
+        [SerializeField]
+        private string bucket;
+
+        public string Bucket => bucket;
 
         [SerializeField]
         private string kind;
@@ -44,13 +52,28 @@ namespace Firebase.Storage
         private int Size => int.Parse(size);
 
         [SerializeField]
-        private DateTime timeCreated;
+        private string timeCreated;
 
-        public DateTime TimeCreate => timeCreated;
+        public DateTime TimeCreate => DateTime.Parse(timeCreated);
 
         [SerializeField]
-        private DateTime updated;
+        private string updated;
 
-        public DateTime Updated => updated;
+        public DateTime Updated => DateTime.Parse(updated);
+
+        [SerializeField]
+        private string md5Hash;
+
+        public string Md5Hash => md5Hash;
+
+        [SerializeField]
+        private string contentEncoding;
+
+        public string ContentEncoding => contentEncoding;
+
+        [SerializeField]
+        private string contentDisposition;
+
+        public string ContentDisposition => contentDisposition;
     }
 }

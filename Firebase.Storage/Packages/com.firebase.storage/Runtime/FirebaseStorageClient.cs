@@ -1,8 +1,8 @@
 ﻿// Licensed under the MIT License. See LICENSE in the project root for license information.
 
+using Firebase.Authentication;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Firebase.Authentication;
 
 namespace Firebase.Storage
 {
@@ -21,9 +21,11 @@ namespace Firebase.Storage
             AuthenticationClient = authenticationClient;
             StorageBucket = storageBucket ?? $"{authenticationClient.Configuration.ProjectId}.appspot.com";
             topLevelResource = new FirebaseStorageResource(this, string.Empty);
+            resourceCache = new Dictionary<string, FirebaseStorageResource>();
         }
 
         private readonly FirebaseStorageResource topLevelResource;
+        private readonly Dictionary<string, FirebaseStorageResource> resourceCache;
 
         internal FirebaseAuthenticationClient AuthenticationClient { get; }
 
@@ -35,20 +37,24 @@ namespace Firebase.Storage
         /// <param name="name">Name of the resource. This can be a folder, a file name or full path.</param>
         /// <param name="delimiter">Directory-like mode, with "/" being a common value for the delimiter.</param>
         /// <example>
-        /// // Fluid syntax.
         /// storage.Resource("some/path/to/file.png");
-        /// // Object composition syntax.
-        /// storage.Resource("some")
-        ///        .Child("path")
-        ///        .Child("to/file.png");
         /// </example>
-        /// <returns>A <see cref="FirebaseStorageResource"/> for fluid syntax.</returns>
-        public FirebaseStorageResource Resource(string name, string delimiter = "/") => new FirebaseStorageResource(this, name, delimiter);
+        /// <returns>A <see cref="FirebaseStorageResource"/>.</returns>
+        public FirebaseStorageResource Resource(string name, string delimiter = "/")
+        {
+            if (!resourceCache.TryGetValue(name, out var resource))
+            {
+                resource = new FirebaseStorageResource(this, name, delimiter);
+                resourceCache.Add(name, resource);
+            }
+
+            return resource;
+        }
 
         /// <summary>
         /// Lists all the top level resources in the bucket.
         /// </summary>
         /// <returns>The list of <see cref="FirebaseStorageResource"/> items in the top level of the bucket.</returns>
-        public async Task<List<FirebaseStorageResource>> ListItemsAsync() => await topLevelResource.ListItems();
+        public async Task<List<FirebaseStorageResource>> ListItemsAsync() => await topLevelResource.ListItemsAsync();
     }
 }
