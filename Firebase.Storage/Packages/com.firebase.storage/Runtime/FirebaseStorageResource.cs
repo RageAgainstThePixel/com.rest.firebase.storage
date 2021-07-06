@@ -14,21 +14,18 @@ namespace Firebase.Storage
 {
     public class FirebaseStorageResource
     {
-        private const string FirebaseStorageEndpoint = "https://firebasestorage.googleapis.com/v0/b/";
-
         private readonly string name;
         private readonly string delimiter;
         private readonly HttpClient httpClient;
-        private readonly FirebaseStorageClient storageClient;
         private readonly List<string> pathParts;
+        private readonly FirebaseStorageClient storageClient;
 
         internal FirebaseStorageResource(FirebaseStorageClient storageClient, string resourcePath, string delimiter = "/")
         {
             this.delimiter = delimiter;
-            this.storageClient = storageClient;
-
             httpClient = new HttpClient();
             pathParts = new List<string>();
+            this.storageClient = storageClient;
 
             var resourcePathParts = resourcePath.Split(new[] { delimiter }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -50,15 +47,17 @@ namespace Firebase.Storage
         /// <inheritdoc />
         public override string ToString() => ResourcePath;
 
-        private string ResourcePath => $"{name}{delimiter}{string.Join(delimiter, pathParts)}";
+        private string ResourcePath => $"{name}{(pathParts.Count > 0 ? delimiter : string.Empty)}{string.Join(delimiter, pathParts)}";
 
         private string EscapedPath => Uri.EscapeDataString(ResourcePath);
 
-        private string BaseObjectUrl => $"{FirebaseStorageEndpoint}{storageClient.StorageBucket}/o";
+        private readonly string FirebaseStorageEndpoint = "https://firebasestorage.googleapis.com/v0/b/";
 
-        private string TargetUrl => $"{BaseObjectUrl}?name={EscapedPath}";
+        private string FirebaseBucketUrl => $"{FirebaseStorageEndpoint}{storageClient.StorageBucket}/o";
 
-        private string DownloadUrl => $"{BaseObjectUrl}/{EscapedPath}";
+        private string UploadUrl => $"{FirebaseBucketUrl}?name={EscapedPath}";
+
+        private string FullUrl => $"{FirebaseBucketUrl}/{EscapedPath}";
 
         /// <summary>
         /// Upload a given stream to target resource location.
@@ -90,7 +89,7 @@ namespace Firebase.Storage
 
                 try
                 {
-                    var request = new HttpRequestMessage(HttpMethod.Post, TargetUrl)
+                    var request = new HttpRequestMessage(HttpMethod.Post, UploadUrl)
                     {
                         Content = new StreamContent(stream)
                     };
@@ -115,7 +114,7 @@ namespace Firebase.Storage
                 }
                 catch (Exception e)
                 {
-                    throw new FirebaseStorageException(TargetUrl, responseData, e);
+                    throw new FirebaseStorageException(UploadUrl, responseData, e);
                 }
                 finally
                 {
@@ -153,7 +152,7 @@ namespace Firebase.Storage
             try
             {
                 await SetRequestHeadersAsync().ConfigureAwait(false);
-                var result = await httpClient.GetAsync(DownloadUrl).ConfigureAwait(false);
+                var result = await httpClient.GetAsync(FullUrl).ConfigureAwait(false);
                 resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(resultContent);
                 result.EnsureSuccessStatusCode();
@@ -162,7 +161,7 @@ namespace Firebase.Storage
             }
             catch (Exception e)
             {
-                throw new FirebaseStorageException(DownloadUrl, resultContent, e);
+                throw new FirebaseStorageException(FullUrl, resultContent, e);
             }
         }
 
@@ -180,7 +179,7 @@ namespace Firebase.Storage
                 throw new ArgumentOutOfRangeException($"Could not extract {nameof(downloadTokens)} property from response!\nResponse: {JsonConvert.SerializeObject(data)}");
             }
 
-            return $"{DownloadUrl}?alt=media&token={downloadTokens}";
+            return $"{FullUrl}?alt=media&token={downloadTokens}";
         }
 
         /// <summary>
@@ -193,28 +192,29 @@ namespace Firebase.Storage
             try
             {
                 await SetRequestHeadersAsync().ConfigureAwait(false);
-                var result = await httpClient.DeleteAsync(DownloadUrl).ConfigureAwait(false);
+                var result = await httpClient.DeleteAsync(FullUrl).ConfigureAwait(false);
                 resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
                 result.EnsureSuccessStatusCode();
             }
             catch (Exception e)
             {
-                throw new FirebaseStorageException(DownloadUrl, resultContent, e);
+                throw new FirebaseStorageException(FullUrl, resultContent, e);
             }
         }
 
         /// <summary>
         /// Retrieves a list of objects matching the criteria, ordered in the list lexicographically by name.
         /// </summary>
+        /// <param name="recursive">Should the method list all of the items under this resource recursively?</param>
         /// <param name="prefix">Filter results to include only objects whose names begin with this prefix.</param>
         /// <param name="maxResults">Maximum combined number of entries in items[] and prefixes[] to return in a single page of responses. Because duplicate entries in prefixes[] are omitted, fewer total results may be returned than requested. The service uses this parameter or 1,000 items, whichever is smaller.</param>
         /// <param name="startOffset">Filter results to objects whose names are lexicographically equal to or after startOffset. If endOffset is also set, the objects listed have names between startOffset (inclusive) and endOffset (exclusive).</param>
         /// <param name="endOffset">Filter results to objects whose names are lexicographically before endOffset. If startOffset is also set, the objects listed have names between startOffset (inclusive) and endOffset (exclusive).</param>
         /// <returns></returns>
-        public async Task<List<FirebaseStorageResource>> ListItemsAsync(string prefix = null, int maxResults = 1000, string startOffset = null, string endOffset = null)
+        public async Task<List<FirebaseStorageResource>> ListItemsAsync(bool recursive = false, string prefix = null, int maxResults = 1000, string startOffset = null, string endOffset = null)
         {
             var responseContent = "N/A";
-            var request = $"{BaseObjectUrl}?{nameof(delimiter)}={Uri.EscapeUriString(delimiter)}";
+            var request = $"{FirebaseBucketUrl}?{nameof(delimiter)}={Uri.EscapeUriString(delimiter)}";
 
             if (!string.IsNullOrWhiteSpace(prefix))
             {
@@ -222,7 +222,7 @@ namespace Firebase.Storage
             }
             else
             {
-                // request += $"&{nameof(prefix)}={Uri.EscapeUriString(name)}{Uri.EscapeUriString(delimiter)}";
+                request += $"&{nameof(prefix)}={Uri.EscapeUriString(ResourcePath)}{Uri.EscapeUriString(delimiter)}";
             }
 
             if (!string.IsNullOrWhiteSpace(startOffset))
@@ -254,7 +254,20 @@ namespace Firebase.Storage
 
             for (int i = 0; i < listResponse.Prefixes.Count; i++)
             {
-                result.Add(new FirebaseStorageResource(storageClient, listResponse.Prefixes[i], delimiter));
+                var resourceFolder = new FirebaseStorageResource(storageClient, listResponse.Prefixes[i], delimiter);
+                result.Add(resourceFolder);
+
+                if (recursive)
+                {
+                    try
+                    {
+                        result.AddRange(await resourceFolder.ListItemsAsync(true, prefix, maxResults, startOffset, endOffset));
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Failed to get {resourceFolder} items!\n{e}");
+                    }
+                }
             }
 
             for (var i = 0; i < listResponse.Items.Count; i++)
