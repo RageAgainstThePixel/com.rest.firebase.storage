@@ -57,7 +57,10 @@ namespace Firebase.Storage
 
         private string UploadUrl => $"{FirebaseBucketUrl}?name={EscapedPath}";
 
-        private string FullUrl => $"{FirebaseBucketUrl}/{EscapedPath}";
+        /// <summary>
+        /// The full escaped resource url.
+        /// </summary>
+        public string ResourceUrl => $"{FirebaseBucketUrl}/{EscapedPath}";
 
         /// <summary>
         /// Upload a given stream to target resource location.
@@ -152,7 +155,7 @@ namespace Firebase.Storage
             try
             {
                 await SetRequestHeadersAsync().ConfigureAwait(false);
-                var result = await httpClient.GetAsync(FullUrl).ConfigureAwait(false);
+                var result = await httpClient.GetAsync(ResourceUrl).ConfigureAwait(false);
                 resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(resultContent);
                 result.EnsureSuccessStatusCode();
@@ -161,7 +164,7 @@ namespace Firebase.Storage
             }
             catch (Exception e)
             {
-                throw new FirebaseStorageException(FullUrl, resultContent, e);
+                throw new FirebaseStorageException(ResourceUrl, resultContent, e);
             }
         }
 
@@ -179,7 +182,7 @@ namespace Firebase.Storage
                 throw new ArgumentOutOfRangeException($"Could not extract {nameof(downloadTokens)} property from response!\nResponse: {JsonConvert.SerializeObject(data)}");
             }
 
-            return $"{FullUrl}?alt=media&token={downloadTokens}";
+            return $"{ResourceUrl}?alt=media&token={downloadTokens}";
         }
 
         /// <summary>
@@ -192,13 +195,13 @@ namespace Firebase.Storage
             try
             {
                 await SetRequestHeadersAsync().ConfigureAwait(false);
-                var result = await httpClient.DeleteAsync(FullUrl).ConfigureAwait(false);
+                var result = await httpClient.DeleteAsync(ResourceUrl).ConfigureAwait(false);
                 resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
                 result.EnsureSuccessStatusCode();
             }
             catch (Exception e)
             {
-                throw new FirebaseStorageException(FullUrl, resultContent, e);
+                throw new FirebaseStorageException(ResourceUrl, resultContent, e);
             }
         }
 
