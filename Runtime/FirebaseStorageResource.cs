@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
@@ -24,6 +25,7 @@ namespace Firebase.Storage
         {
             this.delimiter = delimiter;
             httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromMilliseconds(-1.0);
             pathParts = new List<string>();
             this.storageClient = storageClient;
 
@@ -127,13 +129,41 @@ namespace Firebase.Storage
 
             async Task ReportProgressLoop()
             {
+                var frame = 0;
+                var delayMs = 500;
+
                 while (true)
                 {
-                    await Task.Delay(500);
+                    await Task.Delay(delayMs);
+
+                    frame++;
+                    var unit = "b";
+                    var speed = (stream.Position * 8) / (frame * 0.5f);
+
+                    if (speed > 1e+2 && speed < 1e+5)
+                    {
+                        unit = "kb";
+                        speed = (float)Math.Round(speed / 1e+3);
+                    }
+                    else if (speed > 1e+5 && speed < 1e+8)
+                    {
+                        unit = "mb";
+                        speed = (float)Math.Round(speed / 1e+6);
+                    }
+                    else if (speed > 1e+8 && speed < 1e+11)
+                    {
+                        unit = "gb";
+                        speed = (float)Math.Round(speed / 1e+9);
+                    }
+                    else if (speed > 1e+11)
+                    {
+                        unit = "tb";
+                        speed = (float)Math.Round(speed / 1e+12);
+                    }
 
                     try
                     {
-                        progress?.Report(new FirebaseStorageProgress(stream.Position, stream.Length));
+                        progress?.Report(new FirebaseStorageProgress(stream.Position, stream.Length, speed, unit));
                     }
                     catch (ObjectDisposedException)
                     {
