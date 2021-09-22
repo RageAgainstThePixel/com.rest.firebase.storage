@@ -1,8 +1,11 @@
 ﻿// Licensed under the MIT License. See LICENSE in the project root for license information.
 
 using Firebase.Authentication;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace Firebase.Storage
 {
@@ -56,5 +59,44 @@ namespace Firebase.Storage
         /// </summary>
         /// <returns>The list of <see cref="FirebaseStorageResource"/> items in the top level of the bucket.</returns>
         public async Task<List<FirebaseStorageResource>> ListItemsAsync() => await topLevelResource.ListItemsAsync();
+
+        /// <summary>
+        /// Upload a provided file path to a remote resource location.
+        /// </summary>
+        /// <param name="localPath">The local file path.</param>
+        /// <param name="remotePath">The remote path to upload it to.</param>
+        /// <param name="displayProgress">Optional (Editor Only) Display progress bar.</param>
+        /// <returns>The download url to the uploaded file.</returns>
+        public async Task<string> UploadFileAsync(string localPath, string remotePath, bool displayProgress = false)
+        {
+            using (var fileStream = File.OpenRead(localPath))
+            {
+                string downloadUrl;
+
+                try
+                {
+                    downloadUrl = await Resource($"{remotePath}/{Path.GetFileName(localPath)}")
+                        .UploadAsync(fileStream, MimeMapping.GetMimeMapping(Path.GetFileName(localPath)), new Progress<FirebaseStorageProgress>(progress =>
+                       {
+#if UNITY_EDITOR
+                           if (displayProgress)
+                           {
+                               UnityEditor.EditorUtility.DisplayProgressBar("Firebase Bundle Uploader <Uploading>",
+                                   $"({progress.AvgSpeed}) Uploading: {Path.GetFullPath(localPath)}",
+                                   progress.Percentage * 0.01f);
+                           }
+#endif
+                       }));
+                }
+                finally
+                {
+#if UNITY_EDITOR
+                    UnityEditor.EditorUtility.ClearProgressBar();
+#endif
+                }
+
+                return downloadUrl;
+            }
+        }
     }
 }
