@@ -1,10 +1,11 @@
 ﻿// Licensed under the MIT License. See LICENSE in the project root for license information.
 
+using Firebase.Authentication;
+using Firebase.Authentication.Exceptions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
@@ -113,13 +114,16 @@ namespace Firebase.Storage
 
                     return await GetDownloadUrlAsync(data).ConfigureAwait(false);
                 }
-                catch (TaskCanceledException)
-                {
-                    throw;
-                }
                 catch (Exception e)
                 {
-                    throw new FirebaseStorageException(UploadUrl, responseData, e);
+                    switch (e)
+                    {
+                        case FirebaseAuthException _:
+                        case TaskCanceledException _:
+                            throw;
+                        default:
+                            throw new FirebaseStorageException(UploadUrl, responseData, e);
+                    }
                 }
                 finally
                 {
@@ -194,6 +198,11 @@ namespace Firebase.Storage
             }
             catch (Exception e)
             {
+                if (e is FirebaseAuthException)
+                {
+                    throw;
+                }
+
                 throw new FirebaseStorageException(ResourceUrl, resultContent, e);
             }
         }
@@ -203,11 +212,28 @@ namespace Firebase.Storage
         /// </summary>
         public async Task<string> GetDownloadUrlAsync(Dictionary<string, object> data = null)
         {
-            data = data ?? await GetMetaDataAsync().ConfigureAwait(false);
+            Dictionary<string, object> metaData = data;
+
+            try
+            {
+                if (data == null)
+                {
+                    metaData = await GetMetaDataAsync().ConfigureAwait(false);
+                }
+            }
+            catch (Exception e)
+            {
+                if (e.Message.Contains("404"))
+                {
+                    return string.Empty;
+                }
+
+                throw;
+            }
 
             object downloadTokens;
 
-            if (!data.TryGetValue(nameof(downloadTokens), out downloadTokens))
+            if (!metaData.TryGetValue(nameof(downloadTokens), out downloadTokens))
             {
                 throw new ArgumentOutOfRangeException($"Could not extract {nameof(downloadTokens)} property from response!\nResponse: {JsonConvert.SerializeObject(data)}");
             }
@@ -231,6 +257,16 @@ namespace Firebase.Storage
             }
             catch (Exception e)
             {
+                if (e is FirebaseAuthException)
+                {
+                    throw;
+                }
+
+                if (e.Message.Contains("404"))
+                {
+                    return;
+                }
+
                 throw new FirebaseStorageException(ResourceUrl, resultContent, e);
             }
         }
@@ -279,6 +315,11 @@ namespace Firebase.Storage
             }
             catch (Exception e)
             {
+                if (e is FirebaseAuthException)
+                {
+                    throw;
+                }
+
                 throw new FirebaseStorageException(request, responseContent, e);
             }
 
@@ -313,7 +354,14 @@ namespace Firebase.Storage
 
         private async Task SetRequestHeadersAsync()
         {
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(nameof(Firebase), await storageClient.AuthenticationClient.User.GetIdTokenAsync().ConfigureAwait(false));
+            var token = await storageClient.AuthenticationClient.User.GetIdTokenAsync().ConfigureAwait(false);
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                throw new FirebaseAuthException($"Failed to get a valid authentication token for {storageClient.AuthenticationClient.User.Uid}", AuthErrorReason.InvalidAccessToken);
+            }
+
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(nameof(Firebase), token);
         }
     }
 }
