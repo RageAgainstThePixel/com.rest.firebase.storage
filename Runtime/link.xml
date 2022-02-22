@@ -1,5 +1,5 @@
 <linker>
-  <assembly fullname="System">
+  <assembly fullname="System.Web">
     <namespace fullname="System.Web" preserve="all"/>
   </assembly>
 </linker>
