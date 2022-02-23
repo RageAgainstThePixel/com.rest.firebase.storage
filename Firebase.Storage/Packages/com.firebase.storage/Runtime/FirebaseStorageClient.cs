@@ -88,7 +88,8 @@ namespace Firebase.Storage
                 }
                 catch (NotSupportedException)
                 {
-                    // fallback to octet-stream
+                    // RFC 2046 states in section 4.5.1: https://www.rfc-editor.org/rfc/rfc2046.txt
+                    // The "octet-stream" subtype is used to indicate that a body contains arbitrary binary data.
                     mimeMapping = "application/octet-stream";
                 }
             }
