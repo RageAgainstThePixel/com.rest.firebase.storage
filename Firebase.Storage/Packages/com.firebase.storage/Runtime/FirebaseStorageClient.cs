@@ -65,37 +65,37 @@ namespace Firebase.Storage
         /// </summary>
         /// <param name="localPath">The local file path.</param>
         /// <param name="remotePath">The remote path to upload it to.</param>
-        /// <param name="displayProgress">Optional (Editor Only) Display progress bar.</param>
+        /// <param name="progress">Optional, <see cref="IProgress{T}"/>.</param>
         /// <returns>The download url to the uploaded file.</returns>
-        public async Task<string> UploadFileAsync(string localPath, string remotePath, bool displayProgress = false)
-        {
-            using (var fileStream = File.OpenRead(localPath))
-            {
-                string downloadUrl;
+        public async Task<string> UploadFileAsync(string localPath, string remotePath, IProgress<FirebaseStorageProgress> progress = null)
+            => await UploadFileAsync(localPath, remotePath, null, progress);
 
+        /// <summary>
+        /// Upload a provided file path to a remote resource location.
+        /// </summary>
+        /// <param name="localPath">The local file path.</param>
+        /// <param name="remotePath">The remote path to upload it to.</param>
+        /// <param name="mimeMapping"></param>
+        /// <param name="progress">Optional, <see cref="IProgress{T}"/>.</param>
+        /// <returns>The download url to the uploaded file.</returns>
+        public async Task<string> UploadFileAsync(string localPath, string remotePath, string mimeMapping, IProgress<FirebaseStorageProgress> progress = null)
+        {
+            if (string.IsNullOrWhiteSpace(mimeMapping))
+            {
                 try
                 {
-                    downloadUrl = await Resource($"{remotePath}/{Path.GetFileName(localPath)}")
-                        .UploadAsync(fileStream, MimeMapping.GetMimeMapping(Path.GetFileName(localPath)), new Progress<FirebaseStorageProgress>(progress =>
-                       {
-#if UNITY_EDITOR
-                           if (displayProgress)
-                           {
-                               UnityEditor.EditorUtility.DisplayProgressBar("Firebase Bundle Uploader <Uploading>",
-                                   $"({progress.AvgSpeed}) Uploading: {Path.GetFullPath(localPath)}",
-                                   progress.Percentage * 0.01f);
-                           }
-#endif
-                       }));
+                    mimeMapping = MimeMapping.GetMimeMapping(Path.GetFileName(localPath));
                 }
-                finally
+                catch (NotSupportedException)
                 {
-#if UNITY_EDITOR
-                    UnityEditor.EditorUtility.ClearProgressBar();
-#endif
+                    // fallback to octet-stream
+                    mimeMapping = "application/octet-stream";
                 }
+            }
 
-                return downloadUrl;
+            using (var fileStream = File.OpenRead(localPath))
+            {
+                return await Resource($"{remotePath}/{Path.GetFileName(localPath)}").UploadAsync(fileStream, mimeMapping, progress);
             }
         }
     }
