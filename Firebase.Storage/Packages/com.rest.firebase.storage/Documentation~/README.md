@@ -19,7 +19,6 @@ Based on [FirebaseStorage.net](https://github.com/step-up-labs/firebase-storage-
   - `URL: https://package.openupm.com`
   - `Scope(s):`
     - `com.rest.firebase`
-    - `com.utilities`
 
 ![scoped-registries](images/package-manager-scopes.png)
 
