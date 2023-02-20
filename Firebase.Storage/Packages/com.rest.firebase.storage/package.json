@@ -1,0 +1,25 @@
+{
+  "name": "com.rest.firebase.storage",
+  "displayName": "Firebase.Storage",
+  "description": "A non-official Firebase Storage RESTful client.",
+  "keywords": [],
+  "version": "2.0.0",
+  "unity": "2021.3",
+  "documentationUrl": "https://github.com/RageAgainstThePixel/com.rest.firebase.storage#documentation",
+  "changelogUrl": "https://github.com/RageAgainstThePixel/com.rest.firebase.storage/releases",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "repository": "https://github.com/RageAgainstThePixel/com.rest.firebase.storage.git"
+  },
+  "author": {
+    "name": "Stephen Hodgson",
+    "url": "https://github.com/StephenHodgson"
+  },
+  "dependencies": {
+    "com.rest.firebase.authentication": "2.0.0"
+  },
+  "publishConfig": {
+    "registry": "https://package.openupm.com"
+  }
+}

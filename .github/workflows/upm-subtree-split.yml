@@ -13,5 +13,5 @@ jobs:
         fetch-depth: 0
     - name: upm subtree split
       run: |
-        git subtree split --prefix="Firebase.Storage/Packages/com.firebase.storage" -b upm
+        git subtree split --prefix="Firebase.Storage/Packages/com.rest.firebase.storage" -b upm
         git push -u origin upm
