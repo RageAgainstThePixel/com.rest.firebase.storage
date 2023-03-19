@@ -1,6 +1,5 @@
 ﻿// Licensed under the MIT License. See LICENSE in the project root for license information.
 
-using Firebase.Authentication;
 using Firebase.Authentication.Exceptions;
 using Newtonsoft.Json;
 using System;
@@ -18,41 +17,47 @@ namespace Firebase.Storage
     {
         private const string FirebaseStorageEndpoint = "https://firebasestorage.googleapis.com/v0/b/";
 
-        private readonly string name;
+        private readonly bool isRoot;
         private readonly string delimiter;
-        private readonly HttpClient httpClient;
+        private readonly string resourcePrefix;
         private readonly List<string> pathParts;
         private readonly FirebaseStorageClient storageClient;
 
         internal FirebaseStorageResource(FirebaseStorageClient storageClient, string resourcePath, string delimiter = "/")
         {
             this.delimiter = delimiter;
-            httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromMilliseconds(-1.0);
             pathParts = new List<string>();
             this.storageClient = storageClient;
+            isRoot = string.IsNullOrWhiteSpace(resourcePath);
 
-            var resourcePathParts = resourcePath.Split(new[] { delimiter }, StringSplitOptions.RemoveEmptyEntries);
-
-            if (resourcePathParts.Length > 0)
+            if (string.IsNullOrWhiteSpace(resourcePath))
             {
-                name = resourcePathParts[0];
-
-                for (int i = 1; i < resourcePathParts.Length; i++)
-                {
-                    pathParts.Add(resourcePathParts[i]);
-                }
+                resourcePrefix = string.Empty;
             }
             else
             {
-                name = string.Empty;
+                var resourcePathParts = resourcePath.Split(new[] { delimiter }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (resourcePathParts.Length > 0)
+                {
+                    resourcePrefix = resourcePathParts[0];
+
+                    for (var i = 1; i < resourcePathParts.Length; i++)
+                    {
+                        pathParts.Add(resourcePathParts[i]);
+                    }
+                }
+                else
+                {
+                    resourcePrefix = string.Empty;
+                }
             }
         }
 
         /// <inheritdoc />
         public override string ToString() => ResourcePath;
 
-        private string ResourcePath => $"{name}{(pathParts.Count > 0 ? delimiter : string.Empty)}{string.Join(delimiter, pathParts)}";
+        private string ResourcePath => $"{resourcePrefix}{(pathParts.Count > 0 ? delimiter : string.Empty)}{string.Join(delimiter, pathParts)}";
 
         private string EscapedPath => Uri.EscapeDataString(ResourcePath);
 
@@ -70,9 +75,10 @@ namespace Firebase.Storage
         /// </summary>
         /// <param name="stream"> Stream to upload.</param>
         /// <param name="progress">Optional progress report.</param>
+        /// <param name="cancellationToken">Optional, <see cref="CancellationToken"/>.</param>
         /// <returns>The download url to the uploaded file.</returns>
-        public Task<string> UploadAsync(Stream stream, IProgress<FirebaseStorageProgress> progress = null)
-            => UploadAsync(stream, null, progress, CancellationToken.None);
+        public Task<string> UploadAsync(Stream stream, IProgress<FirebaseStorageProgress> progress = null, CancellationToken cancellationToken = default)
+            => UploadAsync(stream, null, progress, cancellationToken);
 
         /// <summary>
         /// Starts uploading given stream to target resource location.
@@ -80,7 +86,7 @@ namespace Firebase.Storage
         /// <param name="stream"> Stream to upload.</param>
         /// <param name="mimeType">The type of data being uploaded, will be used to set HTTP Content-Type header.</param>
         /// <param name="progress">Optional progress report.</param>
-        /// <param name="cancellationToken"> Cancellation token which can be used to cancel the operation.</param>
+        /// <param name="cancellationToken">Optional, <see cref="CancellationToken"/>.</param>
         /// <returns>The download url to the uploaded file.</returns>
         public Task<string> UploadAsync(Stream stream, string mimeType, IProgress<FirebaseStorageProgress> progress = null, CancellationToken cancellationToken = default)
             => UploadFile(stream, mimeType, progress, cancellationToken);
@@ -105,8 +111,8 @@ namespace Firebase.Storage
                     request.Content.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
                 }
 
-                await SetRequestHeadersAsync().ConfigureAwait(false);
-                var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                await storageClient.SetRequestHeadersAsync().ConfigureAwait(false);
+                var response = await storageClient.HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
                 responseData = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 response.EnsureSuccessStatusCode();
@@ -136,6 +142,7 @@ namespace Firebase.Storage
 
                 while (true)
                 {
+                    // ReSharper disable once MethodSupportsCancellation
                     await Task.Delay(500);
 
                     frame++;
@@ -186,8 +193,8 @@ namespace Firebase.Storage
 
             try
             {
-                await SetRequestHeadersAsync().ConfigureAwait(false);
-                var result = await httpClient.GetAsync(ResourceUrl).ConfigureAwait(false);
+                await storageClient.SetRequestHeadersAsync().ConfigureAwait(false);
+                var result = await storageClient.HttpClient.GetAsync(ResourceUrl).ConfigureAwait(false);
                 resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(resultContent);
                 result.EnsureSuccessStatusCode();
@@ -249,8 +256,8 @@ namespace Firebase.Storage
 
             try
             {
-                await SetRequestHeadersAsync().ConfigureAwait(false);
-                var result = await httpClient.DeleteAsync(ResourceUrl).ConfigureAwait(false);
+                await storageClient.SetRequestHeadersAsync().ConfigureAwait(false);
+                var result = await storageClient.HttpClient.DeleteAsync(ResourceUrl).ConfigureAwait(false);
                 resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
                 result.EnsureSuccessStatusCode();
             }
@@ -275,22 +282,19 @@ namespace Firebase.Storage
         /// </summary>
         /// <param name="recursive">Should the method list all of the items under this resource recursively?</param>
         /// <param name="prefix">Filter results to include only objects whose names begin with this prefix.</param>
+        /// <param name="matchGlob">Glob pattern to try and match results for.</param>
         /// <param name="maxResults">Maximum combined number of entries in items[] and prefixes[] to return in a single page of responses. Because duplicate entries in prefixes[] are omitted, fewer total results may be returned than requested. The service uses this parameter or 1,000 items, whichever is smaller.</param>
         /// <param name="startOffset">Filter results to objects whose names are lexicographically equal to or after startOffset. If endOffset is also set, the objects listed have names between startOffset (inclusive) and endOffset (exclusive).</param>
         /// <param name="endOffset">Filter results to objects whose names are lexicographically before endOffset. If startOffset is also set, the objects listed have names between startOffset (inclusive) and endOffset (exclusive).</param>
         /// <returns></returns>
-        public async Task<List<FirebaseStorageResource>> ListItemsAsync(bool recursive = false, string prefix = null, int maxResults = 1000, string startOffset = null, string endOffset = null)
+        public async Task<List<FirebaseStorageResource>> ListItemsAsync(bool recursive = false, string prefix = null, string matchGlob = null, int? maxResults = null, string startOffset = null, string endOffset = null)
         {
             var responseContent = "N/A";
-            var request = $"{FirebaseBucketUrl}?{nameof(delimiter)}={Uri.EscapeUriString(delimiter)}";
+            var request = $"{FirebaseBucketUrl}?{nameof(delimiter)}={Uri.EscapeUriString(delimiter)}&includeTrailingDelimiter=true";
 
             if (!string.IsNullOrWhiteSpace(prefix))
             {
                 request += $"&{nameof(prefix)}={Uri.EscapeUriString(prefix)}";
-            }
-            else
-            {
-                request += $"&{nameof(prefix)}={Uri.EscapeUriString(ResourcePath)}{Uri.EscapeUriString(delimiter)}";
             }
 
             if (!string.IsNullOrWhiteSpace(startOffset))
@@ -303,12 +307,20 @@ namespace Firebase.Storage
                 request += $"&{nameof(endOffset)}={Uri.EscapeUriString(endOffset)}";
             }
 
-            request += $"&{nameof(maxResults)}={maxResults}&key={storageClient.AuthenticationClient.Configuration.ApiKey}";
+            if (string.IsNullOrWhiteSpace(matchGlob))
+            {
+                request += $"&{nameof(matchGlob)}={matchGlob}";
+            }
+
+            if (maxResults.HasValue)
+            {
+                request += $"&{nameof(maxResults)}={maxResults.Value}";
+            }
 
             try
             {
-                await SetRequestHeadersAsync().ConfigureAwait(false);
-                var response = await httpClient.GetAsync(request).ConfigureAwait(false);
+                await storageClient.SetRequestHeadersAsync().ConfigureAwait(false);
+                var response = await storageClient.HttpClient.GetAsync(request).ConfigureAwait(false);
                 responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
             }
@@ -325,16 +337,16 @@ namespace Firebase.Storage
             var result = new List<FirebaseStorageResource>();
             var listResponse = JsonUtility.FromJson<ListResponse>(responseContent);
 
-            for (int i = 0; i < listResponse.Prefixes.Count; i++)
+            for (var i = 0; i < listResponse.Prefixes.Count; i++)
             {
                 var resourceFolder = new FirebaseStorageResource(storageClient, listResponse.Prefixes[i], delimiter);
                 result.Add(resourceFolder);
 
-                if (recursive)
+                if (recursive || isRoot)
                 {
                     try
                     {
-                        result.AddRange(await resourceFolder.ListItemsAsync(true, prefix, maxResults, startOffset, endOffset).ConfigureAwait(false));
+                        result.AddRange(await resourceFolder.ListItemsAsync(recursive, listResponse.Prefixes[i], matchGlob, maxResults, startOffset, endOffset).ConfigureAwait(false));
                     }
                     catch (Exception e)
                     {
@@ -349,18 +361,6 @@ namespace Firebase.Storage
             }
 
             return result;
-        }
-
-        private async Task SetRequestHeadersAsync()
-        {
-            var token = await storageClient.AuthenticationClient.User.GetIdTokenAsync().ConfigureAwait(false);
-
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                throw new FirebaseAuthException($"Failed to get a valid authentication token for {storageClient.AuthenticationClient.User.Uid}", AuthErrorReason.InvalidAccessToken);
-            }
-
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(nameof(Firebase), token);
         }
     }
 }
