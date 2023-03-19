@@ -16,6 +16,8 @@ namespace Firebase.Storage
 {
     public class FirebaseStorageResource
     {
+        private const string FirebaseStorageEndpoint = "https://firebasestorage.googleapis.com/v0/b/";
+
         private readonly string name;
         private readonly string delimiter;
         private readonly HttpClient httpClient;
@@ -54,8 +56,6 @@ namespace Firebase.Storage
 
         private string EscapedPath => Uri.EscapeDataString(ResourcePath);
 
-        private readonly string FirebaseStorageEndpoint = "https://firebasestorage.googleapis.com/v0/b/";
-
         private string FirebaseBucketUrl => $"{FirebaseStorageEndpoint}{storageClient.StorageBucket}/o";
 
         private string UploadUrl => $"{FirebaseBucketUrl}?name={EscapedPath}";
@@ -89,56 +89,54 @@ namespace Firebase.Storage
         {
             var responseData = "N/A";
 
-            using (var cancelProgressToken = new CancellationTokenSource())
+            using var cancelProgressToken = new CancellationTokenSource();
+
+            var _ = Task.Factory.StartNew(ReportProgressLoop, cancelProgressToken.Token);
+
+            try
             {
-                var _ = Task.Factory.StartNew(ReportProgressLoop, cancelProgressToken.Token);
-
-                try
+                var request = new HttpRequestMessage(HttpMethod.Post, UploadUrl)
                 {
-                    var request = new HttpRequestMessage(HttpMethod.Post, UploadUrl)
-                    {
-                        Content = new StreamContent(stream)
-                    };
+                    Content = new StreamContent(stream)
+                };
 
-                    if (!string.IsNullOrEmpty(mimeType))
-                    {
-                        request.Content.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
-                    }
-
-                    await SetRequestHeadersAsync().ConfigureAwait(false);
-                    var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-                    responseData = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-                    response.EnsureSuccessStatusCode();
-                    var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseData);
-
-                    return await GetDownloadUrlAsync(data).ConfigureAwait(false);
-                }
-                catch (Exception e)
+                if (!string.IsNullOrEmpty(mimeType))
                 {
-                    switch (e)
-                    {
-                        case FirebaseAuthException _:
-                        case TaskCanceledException _:
-                            throw;
-                        default:
-                            throw new FirebaseStorageException(UploadUrl, responseData, e);
-                    }
+                    request.Content.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
                 }
-                finally
+
+                await SetRequestHeadersAsync().ConfigureAwait(false);
+                var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                responseData = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                response.EnsureSuccessStatusCode();
+                var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseData);
+
+                return await GetDownloadUrlAsync(data).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                switch (e)
                 {
-                    cancelProgressToken.Cancel();
+                    case FirebaseAuthException:
+                    case TaskCanceledException:
+                        throw;
+                    default:
+                        throw new FirebaseStorageException(UploadUrl, responseData, e);
                 }
+            }
+            finally
+            {
+                cancelProgressToken.Cancel();
             }
 
             async Task ReportProgressLoop()
             {
                 var frame = 0;
-                var delayMs = 500;
 
                 while (true)
                 {
-                    await Task.Delay(delayMs);
+                    await Task.Delay(500);
 
                     frame++;
                     var unit = "b";
@@ -198,12 +196,13 @@ namespace Firebase.Storage
             }
             catch (Exception e)
             {
-                if (e is FirebaseAuthException)
+                switch (e)
                 {
-                    throw;
+                    case FirebaseAuthException:
+                        throw;
+                    default:
+                        throw new FirebaseStorageException(ResourceUrl, resultContent, e);
                 }
-
-                throw new FirebaseStorageException(ResourceUrl, resultContent, e);
             }
         }
 
@@ -335,7 +334,7 @@ namespace Firebase.Storage
                 {
                     try
                     {
-                        result.AddRange(await resourceFolder.ListItemsAsync(true, prefix, maxResults, startOffset, endOffset));
+                        result.AddRange(await resourceFolder.ListItemsAsync(true, prefix, maxResults, startOffset, endOffset).ConfigureAwait(false));
                     }
                     catch (Exception e)
                     {
