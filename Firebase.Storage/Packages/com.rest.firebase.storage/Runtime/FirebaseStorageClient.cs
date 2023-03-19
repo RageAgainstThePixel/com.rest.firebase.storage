@@ -58,7 +58,8 @@ namespace Firebase.Storage
         /// Lists all the top level resources in the bucket.
         /// </summary>
         /// <returns>The list of <see cref="FirebaseStorageResource"/> items in the top level of the bucket.</returns>
-        public async Task<List<FirebaseStorageResource>> ListItemsAsync() => await topLevelResource.ListItemsAsync();
+        public async Task<List<FirebaseStorageResource>> ListItemsAsync()
+            => await topLevelResource.ListItemsAsync().ConfigureAwait(false);
 
         /// <summary>
         /// Upload a provided file path to a remote resource location.
@@ -68,7 +69,7 @@ namespace Firebase.Storage
         /// <param name="progress">Optional, <see cref="IProgress{T}"/>.</param>
         /// <returns>The download url to the uploaded file.</returns>
         public async Task<string> UploadFileAsync(string localPath, string remotePath, IProgress<FirebaseStorageProgress> progress = null)
-            => await UploadFileAsync(localPath, remotePath, null, progress);
+            => await UploadFileAsync(localPath, remotePath, null, progress).ConfigureAwait(false);
 
         /// <summary>
         /// Upload a provided file path to a remote resource location.
@@ -94,10 +95,8 @@ namespace Firebase.Storage
                 }
             }
 
-            using (var fileStream = File.OpenRead(localPath))
-            {
-                return await Resource($"{remotePath}/{Path.GetFileName(localPath)}").UploadAsync(fileStream, mimeMapping, progress);
-            }
+            await using var fileStream = File.OpenRead(localPath);
+            return await Resource($"{remotePath}/{Path.GetFileName(localPath)}").UploadAsync(fileStream, mimeMapping, progress).ConfigureAwait(false);
         }
     }
 }

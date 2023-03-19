@@ -43,8 +43,8 @@
       "name": "OpenUPM",
       "url": "https://package.openupm.com",
       "scopes": [
-        "com.openupm",
-        "com.rest.firebase"
+        "com.rest.firebase",
+        "com.utilities"
       ]
     }
   ],
