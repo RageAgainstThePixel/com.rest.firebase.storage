@@ -1,5 +1,6 @@
 {
     "name": "Firebase.Storage.Editor",
+    "rootNamespace": "Firebase.Storage.Editor",
     "references": [
         "GUID:bfae05940bb21a84b88f09d028b3bd97"
     ],

@@ -24,8 +24,6 @@ namespace Firebase.Storage
         public string ResponseData { get; }
 
         private static string GenerateExceptionMessage(string requestUrl, string responseData)
-        {
-            return $"Exception occurred while processing the request.\nUrl: {requestUrl}\nResponse: {responseData}";
-        }
+            => $"Exception occurred while processing the request.\nUrl: {requestUrl}\nResponse: {responseData}";
     }
 }

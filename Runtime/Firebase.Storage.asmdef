@@ -1,5 +1,6 @@
 {
     "name": "Firebase.Storage",
+    "rootNamespace": "Firebase.Storage",
     "references": [
         "GUID:77dedea14cd0e914d982cd9a218098eb"
     ],
