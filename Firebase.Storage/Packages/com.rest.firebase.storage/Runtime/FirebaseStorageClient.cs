@@ -4,6 +4,7 @@ using Firebase.Authentication;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -25,12 +26,17 @@ namespace Firebase.Storage
             StorageBucket = storageBucket ?? $"{authenticationClient.Configuration.ProjectId}.appspot.com";
             topLevelResource = new FirebaseStorageResource(this, string.Empty);
             resourceCache = new Dictionary<string, FirebaseStorageResource>();
+            HttpClient = new HttpClient();
+            HttpClient.Timeout = TimeSpan.FromMilliseconds(-1.0);
         }
 
         private readonly FirebaseStorageResource topLevelResource;
+
         private readonly Dictionary<string, FirebaseStorageResource> resourceCache;
 
         internal FirebaseAuthenticationClient AuthenticationClient { get; }
+
+        internal HttpClient HttpClient { get; }
 
         public string StorageBucket { get; }
 
@@ -81,22 +87,28 @@ namespace Firebase.Storage
         /// <returns>The download url to the uploaded file.</returns>
         public async Task<string> UploadFileAsync(string localPath, string remotePath, string mimeMapping, IProgress<FirebaseStorageProgress> progress = null)
         {
+            const string streamingMimeType = "application/octet-stream";
+            var fileName = Path.GetFileName(localPath);
+
             if (string.IsNullOrWhiteSpace(mimeMapping))
             {
                 try
                 {
-                    mimeMapping = MimeMapping.GetMimeMapping(Path.GetFileName(localPath));
+                    mimeMapping = MimeMapping.GetMimeMapping(fileName);
                 }
                 catch (NotSupportedException)
                 {
                     // RFC 2046 states in section 4.5.1: https://www.rfc-editor.org/rfc/rfc2046.txt
                     // The "octet-stream" subtype is used to indicate that a body contains arbitrary binary data.
-                    mimeMapping = "application/octet-stream";
+                    mimeMapping = streamingMimeType;
                 }
             }
 
             await using var fileStream = File.OpenRead(localPath);
-            return await Resource($"{remotePath}/{Path.GetFileName(localPath)}").UploadAsync(fileStream, mimeMapping, progress).ConfigureAwait(false);
+            return await Resource($"{remotePath}/{fileName}").UploadAsync(fileStream, mimeMapping, progress).ConfigureAwait(false);
         }
+
+        internal async Task SetRequestHeadersAsync()
+            => HttpClient.DefaultRequestHeaders.Authorization = await AuthenticationClient.GetAuthenticatedRequestHeadersAsync().ConfigureAwait(false);
     }
 }

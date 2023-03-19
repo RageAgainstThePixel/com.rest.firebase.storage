@@ -3,7 +3,7 @@
   "displayName": "Firebase.Storage",
   "description": "A non-official Firebase RESTful Storage Client for Unity (UPM)",
   "keywords": [],
-  "version": "2.1.0",
+  "version": "2.1.1",
   "unity": "2021.3",
   "documentationUrl": "https://github.com/RageAgainstThePixel/com.rest.firebase.storage#documentation",
   "changelogUrl": "https://github.com/RageAgainstThePixel/com.rest.firebase.storage/releases",
@@ -17,7 +17,7 @@
     "url": "https://github.com/StephenHodgson"
   },
   "dependencies": {
-    "com.rest.firebase.authentication": "2.1.1"
+    "com.rest.firebase.authentication": "2.1.2"
   },
   "publishConfig": {
     "registry": "https://package.openupm.com"
