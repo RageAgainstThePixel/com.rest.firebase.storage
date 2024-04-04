@@ -1,6 +1,6 @@
 ﻿// Licensed under the MIT License. See LICENSE in the project root for license information.
 
-using Firebase.Authentication;
+using Firebase.Rest.Authentication;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,7 +8,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace Firebase.Storage
+namespace Firebase.Rest.Storage
 {
     /// <summary>
     /// A Firebase client which encapsulates authenticated communication with Firebase storage services.

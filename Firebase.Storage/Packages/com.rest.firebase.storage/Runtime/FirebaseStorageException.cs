@@ -2,7 +2,7 @@
 
 using System;
 
-namespace Firebase.Storage
+namespace Firebase.Rest.Storage
 {
     public class FirebaseStorageException : Exception
     {
