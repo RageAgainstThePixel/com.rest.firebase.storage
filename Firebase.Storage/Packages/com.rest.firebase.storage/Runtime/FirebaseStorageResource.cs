@@ -1,6 +1,6 @@
 ﻿// Licensed under the MIT License. See LICENSE in the project root for license information.
 
-using Firebase.Authentication.Exceptions;
+using Firebase.Rest.Authentication.Exceptions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Firebase.Storage
+namespace Firebase.Rest.Storage
 {
     public class FirebaseStorageResource
     {

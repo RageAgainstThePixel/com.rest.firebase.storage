@@ -1,12 +1,10 @@
 {
-    "name": "Firebase.Storage.Editor",
-    "rootNamespace": "Firebase.Storage.Editor",
+    "name": "Firebase.Rest.Storage",
+    "rootNamespace": "Firebase.Rest.Storage",
     "references": [
-        "GUID:bfae05940bb21a84b88f09d028b3bd97"
+        "GUID:77dedea14cd0e914d982cd9a218098eb"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
