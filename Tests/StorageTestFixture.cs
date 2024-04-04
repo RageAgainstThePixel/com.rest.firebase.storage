@@ -1,6 +1,6 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
-using Firebase.Authentication;
+using Firebase.Rest.Authentication;
 using NUnit.Framework;
 using System;
 using System.IO;
@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Firebase.Storage.Tests
+namespace Firebase.Rest.Storage.Tests
 {
     internal class StorageTestFixture
     {
@@ -43,17 +43,7 @@ namespace Firebase.Storage.Tests
             const string password = "tempP@ssw0rd";
 
             var firebaseClient = new FirebaseAuthenticationClient();
-            var fetchResult = await firebaseClient.FetchSignInMethodsForEmailAsync(email);
-
-            if (fetchResult.UserExists)
-            {
-                await firebaseClient.SignInWithEmailAndPasswordAsync(email, password);
-            }
-            else
-            {
-                await firebaseClient.CreateUserWithEmailAndPasswordAsync(email, password);
-            }
-
+            await firebaseClient.CreateUserWithEmailAndPasswordAsync(email, password);
             var firebaseStorageClient = new FirebaseStorageClient(firebaseClient);
 
             Assert.IsNotNull(firebaseStorageClient);

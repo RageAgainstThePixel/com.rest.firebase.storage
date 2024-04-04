@@ -3,7 +3,7 @@
 using System;
 using UnityEngine;
 
-namespace Firebase.Storage
+namespace Firebase.Rest.Storage
 {
     /// <summary>
     /// Full list of meta data available here: https://firebase.google.com/docs/storage/web/file-metadata

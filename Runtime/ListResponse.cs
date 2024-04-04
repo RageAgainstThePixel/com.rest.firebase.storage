@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Firebase.Storage
+namespace Firebase.Rest.Storage
 {
     [Serializable]
     internal class ListResponse
