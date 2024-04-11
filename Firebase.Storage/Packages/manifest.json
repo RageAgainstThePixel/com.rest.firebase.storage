@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.rest.firebase.authentication": "file:E:/Dev/Firebase/com.rest.firebase.authentication/Firebase.Authentication/Packages/com.rest.firebase.authentication",
+    "com.rest.firebase.authentication": "https://github.com/RageAgainstThePixel/com.rest.firebase.authentication.git#upm",
     "com.unity.ide.rider": "3.0.28",
     "com.unity.ide.visualstudio": "2.0.22",
     "com.unity.ide.vscode": "1.2.5",
