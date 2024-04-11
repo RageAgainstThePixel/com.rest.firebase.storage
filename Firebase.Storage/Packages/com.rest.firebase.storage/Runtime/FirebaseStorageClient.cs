@@ -94,11 +94,7 @@ namespace Firebase.Rest.Storage
             {
                 try
                 {
-#if NET_4_6
                     mimeMapping = MimeMapping.GetMimeMapping(fileName);
-#else
-                    mimeMapping = MimeMapping.GetMimeMapping(fileName);
-#endif
                 }
                 catch (NotSupportedException)
                 {
