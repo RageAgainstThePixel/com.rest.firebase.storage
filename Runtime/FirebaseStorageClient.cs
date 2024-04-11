@@ -110,5 +110,47 @@ namespace Firebase.Rest.Storage
 
         internal async Task SetRequestHeadersAsync()
             => HttpClient.DefaultRequestHeaders.Authorization = await AuthenticationClient.GetAuthenticatedRequestHeadersAsync().ConfigureAwait(false);
+
+#if !NET_4_6
+        private static class MimeMapping
+        {
+            private static readonly Dictionary<string, string> MimeMappings = new()
+            {
+                { ".png", "image/png" },
+                { ".jpg", "image/jpeg" },
+                { ".jpeg", "image/jpeg" },
+                { ".gif", "image/gif" },
+                { ".bmp", "image/bmp" },
+                { ".txt", "text/plain" },
+                { ".html", "text/html" },
+                { ".css", "text/css" },
+                { ".js", "application/javascript" },
+                { ".json", "application/json" },
+                { ".xml", "application/xml" },
+                { ".csv", "text/csv" },
+                { ".mp3", "audio/mpeg" },
+                { ".wav", "audio/wav" },
+                { ".mp4", "video/mp4" },
+                { ".mov", "video/quicktime" },
+                { ".avi", "video/x-msvideo" },
+                { ".zip", "application/zip" },
+                { ".rar", "application/x-rar-compressed" },
+                { ".7z", "application/x-7z-compressed" },
+                { ".pdf", "application/pdf" },
+            };
+
+            public static string GetMimeMapping(string fileName)
+            {
+                var extension = Path.GetExtension(fileName);
+
+                if (extension == null)
+                {
+                    return "application/octet-stream";
+                }
+
+                return MimeMappings.TryGetValue(extension.ToLower(), out var mime) ? mime : "application/octet-stream";
+            }
+        }
+#endif
     }
 }
